@@ -5,8 +5,7 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>
 NSA QR Scanner
@@ -33,15 +32,6 @@ border-radius:12px;
 }
 
 
-video{
-
-width:100%;
-border-radius:10px;
-background:#000;
-
-}
-
-
 button{
 
 width:100%;
@@ -56,13 +46,21 @@ font-size:16px;
 }
 
 
+#reader{
+
+width:100%;
+
+}
+
+
 #status{
 
-margin-top:20px;
-padding:12px;
+margin-top:15px;
+padding:10px;
 background:#eef2f6;
 
 }
+
 
 </style>
 
@@ -81,19 +79,16 @@ NSA QR Scanner
 </h2>
 
 
-<video id="video"
-autoplay
-playsinline
-></video>
+<div id="reader"></div>
 
 
 <button id="start">
-START CAMERA
+Start Scanner
 </button>
 
 
-<button id="switch">
-SWITCH CAMERA
+<button id="stop" hidden>
+Stop Scanner
 </button>
 
 
@@ -102,218 +97,174 @@ Ready.
 </p>
 
 
-<canvas id="canvas"
-hidden>
-</canvas>
-
-
 </main>
 
 
 
-<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 
 <script>
 
 
-const video =
-document.getElementById("video");
+let scanner=null;
 
 
-const canvas =
-document.getElementById("canvas");
-
-
-const ctx =
-canvas.getContext("2d");
-
-
-const statusBox =
-document.getElementById("status");
-
-
-let stream=null;
-
-
-let facing="environment";
-
-
-let scanning=false;
+let locked=false;
 
 
 
 function status(msg){
 
-statusBox.textContent=msg;
+document.getElementById("status").innerText=msg;
 
 }
 
 
 
+function startScanner(){
 
-async function startCamera(){
 
+if(scanner){
 
-if(stream){
-
-stream.getTracks()
-.forEach(t=>t.stop());
+return;
 
 }
 
 
 
-try{
+scanner =
+new Html5Qrcode(
+"reader"
+);
 
 
-stream =
-await navigator.mediaDevices.getUserMedia({
 
-video:{
-facingMode:{
-ideal:facing
-}
+scanner.start(
+
+{
+facingMode:"environment"
 },
 
-audio:false
+{
+fps:10,
+qrbox:250
+
+},
+
+
+(decodedText)=>{
+
+
+if(locked){
+
+return;
+
+}
+
+
+locked=true;
+
+
+status(
+"QR detected"
+);
+
+
+
+sendQR(decodedText);
+
+
+},
+
+
+(error)=>{
+
+
+}
+
+
+
+)
+
+
+.then(()=>{
+
+
+status(
+"Camera active. Scan QR code."
+);
+
+
+document
+.getElementById("start")
+.hidden=true;
+
+
+document
+.getElementById("stop")
+.hidden=false;
+
+
+})
+
+
+.catch(error=>{
+
+
+status(
+"Camera error: "+error
+);
+
 
 });
 
 
-
-video.srcObject=stream;
-
-
-await video.play();
-
-
-scanning=true;
-
-
-status(
-"Camera active. Point at QR code."
-);
-
-
-scanQR();
-
-
-
-}
-
-catch(e){
-
-
-status(
-"Camera error: "
-+
-e.name
-+
-" "
-+
-e.message
-);
-
-
-}
-
-
-
 }
 
 
 
 
-function scanQR(){
 
 
-if(!scanning){
+
+function stopScanner(){
+
+
+if(!scanner){
 
 return;
 
 }
 
 
-
-if(video.readyState===video.HAVE_ENOUGH_DATA){
-
-
-canvas.width =
-video.videoWidth;
+scanner.stop()
+.then(()=>{
 
 
-canvas.height =
-video.videoHeight;
+scanner.clear();
+
+scanner=null;
+
+locked=false;
 
 
-
-ctx.drawImage(
-video,
-0,
-0,
-canvas.width,
-canvas.height
+status(
+"Scanner stopped"
 );
 
 
-
-const imageData =
-ctx.getImageData(
-0,
-0,
-canvas.width,
-canvas.height
-);
-
-
-
-const qr =
-jsQR(
-imageData.data,
-imageData.width,
-imageData.height
-);
-
-
-
-if(qr){
-
-
-scanning=false;
-
-
-sendQR(qr.data);
-
-
-return;
+});
 
 
 }
 
 
-}
-
-
-
-requestAnimationFrame(
-scanQR
-);
-
-
-
-}
 
 
 
 
 function sendQR(text){
-
-
-
-status(
-"QR detected. Sending..."
-);
 
 
 
@@ -328,12 +279,12 @@ window.opener.postMessage(
 
 {
 
-type:
-"NSA_QR_SCAN",
+type:"NSA_QR_SCAN",
 
 data:text
 
 },
+
 
 "*"
 
@@ -342,17 +293,26 @@ data:text
 
 
 status(
-"QR sent successfully."
+"QR sent successfully"
 );
 
 
 
+setTimeout(()=>{
+
+window.close();
+
+},1000);
+
+
+
 }
+
 else{
 
 
 status(
-"Original page not found."
+"Original page not found"
 );
 
 
@@ -361,6 +321,8 @@ status(
 
 
 }
+
+
 
 
 
@@ -368,29 +330,14 @@ status(
 
 document
 .getElementById("start")
-.onclick =
-startCamera;
+.onclick=startScanner;
+
 
 
 
 document
-.getElementById("switch")
-.onclick =
-async function(){
-
-
-facing =
-facing==="environment"
-?
-"user"
-:
-"environment";
-
-
-startCamera();
-
-
-};
+.getElementById("stop")
+.onclick=stopScanner;
 
 
 
