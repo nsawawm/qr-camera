@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>
+NSA QR Scanner
+</title>
+
+
+<style>
+
+body{
+
+font-family:Arial;
+background:#f3f5f7;
+padding:20px;
+
+}
+
+
+main{
+
+background:white;
+padding:20px;
+border-radius:12px;
+
+}
+
+
+video{
+
+width:100%;
+border-radius:10px;
+background:#000;
+
+}
+
+
+button{
+
+width:100%;
+padding:14px;
+margin-top:15px;
+border:none;
+border-radius:8px;
+background:#1769aa;
+color:white;
+font-size:16px;
+
+}
+
+
+#status{
+
+margin-top:20px;
+padding:12px;
+background:#eef2f6;
+
+}
+
+</style>
+
+
+</head>
+
+
+<body>
+
+
+<main>
+
+
+<h2>
+NSA QR Scanner
+</h2>
+
+
+<video id="video"
+autoplay
+playsinline
+></video>
+
+
+<button id="start">
+START CAMERA
+</button>
+
+
+<button id="switch">
+SWITCH CAMERA
+</button>
+
+
+<p id="status">
+Ready.
+</p>
+
+
+<canvas id="canvas"
+hidden>
+</canvas>
+
+
+</main>
+
+
+
+<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+
+
+<script>
+
+
+const video =
+document.getElementById("video");
+
+
+const canvas =
+document.getElementById("canvas");
+
+
+const ctx =
+canvas.getContext("2d");
+
+
+const statusBox =
+document.getElementById("status");
+
+
+let stream=null;
+
+
+let facing="environment";
+
+
+let scanning=false;
+
+
+
+function status(msg){
+
+statusBox.textContent=msg;
+
+}
+
+
+
+
+async function startCamera(){
+
+
+if(stream){
+
+stream.getTracks()
+.forEach(t=>t.stop());
+
+}
+
+
+
+try{
+
+
+stream =
+await navigator.mediaDevices.getUserMedia({
+
+video:{
+facingMode:{
+ideal:facing
+}
+},
+
+audio:false
+
+});
+
+
+
+video.srcObject=stream;
+
+
+await video.play();
+
+
+scanning=true;
+
+
+status(
+"Camera active. Point at QR code."
+);
+
+
+scanQR();
+
+
+
+}
+
+catch(e){
+
+
+status(
+"Camera error: "
++
+e.name
++
+" "
++
+e.message
+);
+
+
+}
+
+
+
+}
+
+
+
+
+function scanQR(){
+
+
+if(!scanning){
+
+return;
+
+}
+
+
+
+if(video.readyState===video.HAVE_ENOUGH_DATA){
+
+
+canvas.width =
+video.videoWidth;
+
+
+canvas.height =
+video.videoHeight;
+
+
+
+ctx.drawImage(
+video,
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+
+
+const imageData =
+ctx.getImageData(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+
+
+const qr =
+jsQR(
+imageData.data,
+imageData.width,
+imageData.height
+);
+
+
+
+if(qr){
+
+
+scanning=false;
+
+
+sendQR(qr.data);
+
+
+return;
+
+
+}
+
+
+}
+
+
+
+requestAnimationFrame(
+scanQR
+);
+
+
+
+}
+
+
+
+
+function sendQR(text){
+
+
+
+status(
+"QR detected. Sending..."
+);
+
+
+
+if(
+window.opener &&
+!window.opener.closed
+){
+
+
+
+window.opener.postMessage(
+
+{
+
+type:
+"NSA_QR_SCAN",
+
+data:text
+
+},
+
+"*"
+
+);
+
+
+
+status(
+"QR sent successfully."
+);
+
+
+
+}
+else{
+
+
+status(
+"Original page not found."
+);
+
+
+}
+
+
+
+}
+
+
+
+
+
+document
+.getElementById("start")
+.onclick =
+startCamera;
+
+
+
+document
+.getElementById("switch")
+.onclick =
+async function(){
+
+
+facing =
+facing==="environment"
+?
+"user"
+:
+"environment";
+
+
+startCamera();
+
+
+};
+
+
+
+</script>
+
+
+</body>
+
+</html>
