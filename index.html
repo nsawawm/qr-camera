@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 
@@ -16,9 +16,11 @@ NSA QR Scanner
 
 body{
 
-font-family:Arial;
+font-family:Arial,sans-serif;
+max-width:600px;
+margin:25px auto;
+padding:16px;
 background:#f3f5f7;
-padding:20px;
 
 }
 
@@ -34,14 +36,16 @@ border-radius:12px;
 
 button{
 
+display:block;
 width:100%;
 padding:14px;
-margin-top:15px;
-border:none;
+margin:12px 0;
+border:0;
 border-radius:8px;
 background:#1769aa;
 color:white;
 font-size:16px;
+cursor:pointer;
 
 }
 
@@ -55,9 +59,9 @@ width:100%;
 
 #status{
 
-margin-top:15px;
-padding:10px;
+padding:12px;
 background:#eef2f6;
+overflow-wrap:anywhere;
 
 }
 
@@ -79,16 +83,21 @@ NSA QR Scanner
 </h2>
 
 
+<p>
+Scan HQ registration or evaluation QR code.
+</p>
+
+
 <div id="reader"></div>
 
 
 <button id="start">
-Start Scanner
+START SCANNER
 </button>
 
 
 <button id="stop" hidden>
-Stop Scanner
+STOP SCANNER
 </button>
 
 
@@ -109,20 +118,26 @@ Ready.
 
 let scanner=null;
 
-
-let locked=false;
-
+let scanLocked=false;
 
 
-function status(msg){
 
-document.getElementById("status").innerText=msg;
+
+function setStatus(message){
+
+document
+.getElementById("status")
+.innerText=message;
 
 }
 
 
 
+
+
+
 function startScanner(){
+
 
 
 if(scanner){
@@ -142,32 +157,43 @@ new Html5Qrcode(
 
 scanner.start(
 
-{
-facingMode:"environment"
-},
 
 {
+facingMode:
+"environment"
+},
+
+
+{
+
 fps:10,
-qrbox:250
+
+qrbox:{
+width:250,
+height:250
+}
 
 },
 
 
-(decodedText)=>{
+
+function(decodedText){
 
 
-if(locked){
+
+if(scanLocked){
 
 return;
 
 }
 
 
-locked=true;
+scanLocked=true;
 
 
-status(
-"QR detected"
+
+setStatus(
+"QR detected: "+decodedText
 );
 
 
@@ -175,25 +201,28 @@ status(
 sendQR(decodedText);
 
 
+
 },
 
 
-(error)=>{
 
+function(errorMessage){
+
+// Ignore normal scanning errors
 
 }
-
 
 
 )
 
 
-.then(()=>{
+.then(function(){
 
 
-status(
-"Camera active. Scan QR code."
+setStatus(
+"Camera active. Point at QR code."
 );
+
 
 
 document
@@ -201,18 +230,20 @@ document
 .hidden=true;
 
 
+
 document
 .getElementById("stop")
 .hidden=false;
 
 
+
 })
 
 
-.catch(error=>{
+.catch(function(error){
 
 
-status(
+setStatus(
 "Camera error: "+error
 );
 
@@ -221,6 +252,7 @@ status(
 
 
 }
+
 
 
 
@@ -238,20 +270,24 @@ return;
 }
 
 
+
 scanner.stop()
-.then(()=>{
+
+.then(function(){
 
 
 scanner.clear();
 
 scanner=null;
 
-locked=false;
+scanLocked=false;
 
 
-status(
+
+setStatus(
 "Scanner stopped"
 );
+
 
 
 });
@@ -264,7 +300,17 @@ status(
 
 
 
-function sendQR(text){
+
+
+function sendQR(decodedText){
+
+
+
+console.log(
+"[QR SCANNED]",
+decodedText
+);
+
 
 
 
@@ -279,12 +325,13 @@ window.opener.postMessage(
 
 {
 
-type:"NSA_QR_SCAN",
+type:
+"NSA_QR_SCAN",
 
-data:text
+data:
+decodedText
 
 },
-
 
 "*"
 
@@ -292,17 +339,25 @@ data:text
 
 
 
-status(
-"QR sent successfully"
+setStatus(
+"QR sent back successfully"
 );
 
 
 
-setTimeout(()=>{
+
+
+setTimeout(
+
+function(){
 
 window.close();
 
-},1000);
+},
+
+1000
+
+);
 
 
 
@@ -311,13 +366,13 @@ window.close();
 else{
 
 
-status(
-"Original page not found"
+setStatus(
+"Parent window not found."
 );
 
 
-}
 
+}
 
 
 }
@@ -329,14 +384,19 @@ status(
 
 
 document
+
 .getElementById("start")
+
 .onclick=startScanner;
 
 
 
 
+
 document
+
 .getElementById("stop")
+
 .onclick=stopScanner;
 
 
