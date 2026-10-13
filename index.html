@@ -150,7 +150,10 @@ return;
 
 scanner =
 new Html5Qrcode(
-"reader"
+"reader",
+{
+verbose:true
+}
 );
 
 
@@ -177,23 +180,29 @@ height:250
 
 
 
-function(decodedText){
+function(decodedText, decodedResult){
 
 
-
-if(scanLocked){
-
-return;
-
-}
+console.log(
+"========== QR CALLBACK FIRED =========="
+);
 
 
-scanLocked=true;
+console.log(
+"TEXT:",
+decodedText
+);
+
+
+console.log(
+"RESULT:",
+decodedResult
+);
 
 
 
 setStatus(
-"QR detected: "+decodedText
+"QR FOUND:\n" + decodedText
 );
 
 
