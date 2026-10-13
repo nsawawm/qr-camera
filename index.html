@@ -316,78 +316,18 @@ setStatus(
 function sendQR(decodedText){
 
 
-
 console.log(
 "[QR SCANNED]",
 decodedText
 );
 
 
-
-
-if(
-window.opener &&
-!window.opener.closed
-){
-
-
-
-window.opener.postMessage(
-
-{
-
-type:
-"NSA_QR_SCAN",
-
-data:
-decodedText
-
-},
-
-"*"
-
-);
-
-
-
 setStatus(
-"QR sent back successfully"
+"SCANNED:\n"+decodedText
 );
 
 
-
-
-
-setTimeout(
-
-function(){
-
-window.close();
-
-},
-
-1000
-
-);
-
-
-
 }
-
-else{
-
-
-setStatus(
-"Parent window not found."
-);
-
-
-
-}
-
-
-}
-
 
 
 
