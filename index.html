@@ -322,9 +322,57 @@ decodedText
 );
 
 
+
+if(
+window.opener &&
+!window.opener.closed
+){
+
+
+window.opener.postMessage(
+
+{
+
+type:
+"NSA_QR_SCAN",
+
+data:
+decodedText
+
+},
+
+"*"
+
+);
+
+
+
+setStatus(
+"QR sent successfully"
+);
+
+
+
+setTimeout(function(){
+
+window.close();
+
+},1000);
+
+
+
+}
+
+else{
+
+
 setStatus(
 "SCANNED:\n"+decodedText
 );
+
+
+}
+
 
 
 }
