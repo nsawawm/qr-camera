@@ -1,267 +1,184 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 
 <head>
 
 <meta charset="UTF-8">
 
 <meta name="viewport"
-content="width=device-width,initial-scale=1">
-
+content="width=device-width, initial-scale=1">
 
 <title>
-NSA WAWM Officer Portal
+NSA QR Scanner
 </title>
 
 
-<?!= include('style'); ?>
+<style>
 
-<?!= include('session'); ?>
+body{
 
-<?!= include('router'); ?>
+font-family:
+Arial,
+sans-serif;
 
-<?!= include('qr-router'); ?>
+max-width:
+600px;
 
-<?!= include('auth'); ?>
+margin:
+25px auto;
 
-<?!= include('alert'); ?>
+padding:
+16px;
 
-<?!= include('load'); ?>
+background:
+#f3f5f7;
 
+}
+
+
+main{
+
+background:
+white;
+
+padding:
+20px;
+
+border-radius:
+12px;
+
+}
+
+
+button{
+
+display:
+block;
+
+width:
+100%;
+
+padding:
+14px;
+
+margin:
+12px 0;
+
+border:
+0;
+
+border-radius:
+8px;
+
+background:
+#1769aa;
+
+color:
+white;
+
+font-size:
+16px;
+
+cursor:
+pointer;
+
+}
+
+
+button:disabled{
+
+opacity:
+0.6;
+
+cursor:
+not-allowed;
+
+}
+
+
+#reader{
+
+width:
+100%;
+
+}
+
+
+#status{
+
+padding:
+12px;
+
+background:
+#eef2f6;
+
+overflow-wrap:
+anywhere;
+
+white-space:
+pre-wrap;
+
+}
+
+</style>
 
 </head>
+
 
 
 <body>
 
 
-<div id="officerHome"
-style="display:none;">
+<main>
 
 
-<div class="hero">
-
-
-<div class="card"
-style="max-width:500px;margin:auto;text-align:center;">
-
-
-
-<button
-onclick="logout()"
-style="float:right;"
->
-
-LOGOUT
-
-</button>
-
-
-<div style="clear:both;"></div>
-
-
-
-<img
-src="https://lh3.googleusercontent.com/d/10gIO9KpoqufMr8xWVh6ZfOBgDRU-KUN3"
-style="height:100px;"
->
-
-
-
-<h1 class="title">
-
-NSA Personnel Registration
-
-</h1>
+<h2>
+NSA QR Scanner
+</h2>
 
 
 <p>
 
-Wassa Amenfi West Municipal Secretariat
-
-</p>
-
-
-<p>
-
-Officer Portal
-
-</p>
-
-
-<p id="loggedOfficer">
+Scan an NSA registration or evaluation QR code.
 
 </p>
 
 
 
-<div class="card">
-
-
-<h3>
-
-Scan QR Code
-
-</h3>
-
-
-<p>
-
-Scan official NSA personnel QR code.
-
-</p>
-
-
-<button onclick="openQRScanner()">
-
-OPEN CAMERA
-
-</button>
-
-
+<div id="reader">
 </div>
 
 
 
-<h3>
+<button id="start">
 
-OR
-
-</h3>
-
-
-
-<select
-id="service"
-onchange="handleServiceChange()"
->
-
-<option value="registration">
-
-Registration
-
-</option>
-
-
-<option value="monthly">
-
-Monthly Evaluation Submission
-
-</option>
-
-
-<option value="annual">
-
-Annual Evaluation Submission
-
-</option>
-
-</select>
-
-
-
-<input
-id="nss"
-placeholder="Enter NSS Number"
->
-
-
-
-<!-- =====================================================
-MONTHLY EVALUATION PERIOD
-===================================================== -->
-
-<div
-id="monthlyPeriodFields"
-style="display:none;margin-top:15px;"
->
-
-
-<label
-for="evaluationMonth"
-style="display:block;margin-bottom:5px;"
->
-
-Evaluation Month
-
-</label>
-
-
-<select
-id="evaluationMonth"
-style="width:100%;margin-bottom:10px;"
->
-
-<option value="1">January</option>
-
-<option value="2">February</option>
-
-<option value="3">March</option>
-
-<option value="4">April</option>
-
-<option value="5">May</option>
-
-<option value="6">June</option>
-
-<option value="7">July</option>
-
-<option value="8">August</option>
-
-<option value="9">September</option>
-
-<option value="10">October</option>
-
-<option value="11">November</option>
-
-<option value="12">December</option>
-
-</select>
-
-
-
-<label
-for="evaluationYear"
-style="display:block;margin-bottom:5px;"
->
-
-Evaluation Year
-
-</label>
-
-
-<select
-id="evaluationYear"
-style="width:100%;"
->
-
-</select>
-
-
-</div>
-
-
-
-<button onclick="continuePortal()">
-
-CONTINUE
+START SCANNER
 
 </button>
 
 
 
-<div id="message"></div>
+<button id="stop" hidden>
+
+STOP SCANNER
+
+</button>
 
 
 
-</div>
+<p id="status">
+
+Ready.
+
+</p>
 
 
-</div>
+</main>
 
 
-</div>
+
+<script src="https://unpkg.com/html5-qrcode">
+</script>
 
 
 
@@ -272,1087 +189,342 @@ CONTINUE
 STATE
 ===================================================== */
 
-let registrationNSS = "";
+let scanner = null;
 
-let registrationBusy = false;
-
-let qrWindow = null;
+let scanLocked = false;
 
 
 
 /* =====================================================
-MONTHLY EVALUATION PERIOD
+STATUS
 ===================================================== */
 
-function initializeMonthlyPeriodFields(){
+function setStatus(message){
 
-const monthElement =
-document.getElementById(
-"evaluationMonth"
-);
+document
+.getElementById("status")
+.innerText =
+message;
 
-
-const yearElement =
-document.getElementById(
-"evaluationYear"
-);
+}
 
 
-if(
-!monthElement ||
-!yearElement
-){
+
+/* =====================================================
+START SCANNER
+===================================================== */
+
+function startScanner(){
+
+if(scanner){
 
 return;
 
 }
 
 
-const now =
-new Date();
+scanLocked = false;
 
 
-const currentMonth =
-now.getMonth() + 1;
+scanner =
+new Html5Qrcode(
 
+"reader",
 
-const currentYear =
-now.getFullYear();
-
-
-/* =====================================================
-DEFAULT MONTH
-===================================================== */
-
-monthElement.value =
-String(
-currentMonth
-);
-
-
-/* =====================================================
-YEAR OPTIONS
-
-Current year through previous 5 years
-===================================================== */
-
-yearElement.innerHTML = "";
-
-
-for(
-let year = currentYear;
-year >= currentYear - 5;
-year--
-){
-
-const option =
-document.createElement(
-"option"
-);
-
-
-option.value =
-String(year);
-
-
-option.textContent =
-String(year);
-
-
-yearElement.appendChild(
-option
-);
-
+{
+verbose:true
 }
 
-
-yearElement.value =
-String(
-currentYear
-);
-
-}
-
-
-
-/* =====================================================
-SERVICE SELECTION
-===================================================== */
-
-function handleServiceChange(){
-
-const serviceElement =
-document.getElementById(
-"service"
-);
-
-
-const periodFields =
-document.getElementById(
-"monthlyPeriodFields"
-);
-
-
-if(
-!serviceElement ||
-!periodFields
-){
-
-return;
-
-}
-
-
-const service =
-serviceElement.value;
-
-
-if(
-service === "monthly"
-){
-
-periodFields.style.display =
-"block";
-
-
-initializeMonthlyPeriodFields();
-
-}
-
-else{
-
-periodFields.style.display =
-"none";
-
-}
-
-}
-
-
-
-/* =====================================================
-OPEN QR SCANNER
-===================================================== */
-
-function openQRScanner(){
-
-qrWindow =
-window.open(
-"https://nsawawm.github.io/qr-camera/",
-"_blank"
-);
-
-
-if(!qrWindow){
-
-notify(
-"Camera window blocked. Please allow pop-ups.",
-"error"
-);
-
-return;
-
-}
-
-
-notify(
-"QR camera opened. Scan the official QR code.",
-"success"
-);
-
-}
-
-
-
-/* =====================================================
-INITIALISE OFFICER HOME
-===================================================== */
-
-function initializeOfficerHome(){
-
-console.log(
-"[HOME] Initializing officer home..."
-);
-
-
-try{
-
-
-const params =
-new URLSearchParams(
-window.location.search
-);
-
-
-/* =====================================================
-READ PARAMETERS
-
-This is retained for the home page only.
-The evaluation pages themselves use
-google.script.url.getLocation().
-===================================================== */
-
-const qrNSS =
-params.get(
-"nssNumber"
-);
-
-
-const qrType =
-params.get(
-"type"
-);
-
-
-const qrMonth =
-params.get(
-"month"
-);
-
-
-const qrYear =
-params.get(
-"year"
 );
 
 
 
-/* =====================================================
-PREFILL NSS
-===================================================== */
+scanner.start(
 
-if(qrNSS){
+{
 
-const nssInput =
-document.getElementById(
-"nss"
-);
-
-
-if(nssInput){
-
-nssInput.value =
-qrNSS;
-
-}
-
-}
-
-
-
-/* =====================================================
-SET SERVICE FROM URL
-===================================================== */
-
-if(qrType){
-
-const serviceElement =
-document.getElementById(
-"service"
-);
-
-
-if(serviceElement){
-
-const normalizedType =
-String(qrType)
-.trim()
-.toLowerCase();
-
-
-if(
-normalizedType === "monthly"
-){
-
-serviceElement.value =
-"monthly";
-
-
-handleServiceChange();
-
-}
-
-
-else if(
-normalizedType === "annual"
-){
-
-serviceElement.value =
-"annual";
-
-
-handleServiceChange();
-
-}
-
-
-else{
-
-serviceElement.value =
-"registration";
-
-
-handleServiceChange();
-
-}
-
-}
-
-}
-
-
-
-/* =====================================================
-SET MONTH/YEAR FROM QR
-===================================================== */
-
-if(
-String(qrType || "")
-.trim()
-.toLowerCase()
-===
-"monthly"
-){
-
-const monthElement =
-document.getElementById(
-"evaluationMonth"
-);
-
-
-const yearElement =
-document.getElementById(
-"evaluationYear"
-);
-
-
-if(
-monthElement &&
-yearElement
-){
-
-
-if(
-qrMonth &&
-Number(qrMonth) >= 1 &&
-Number(qrMonth) <= 12
-){
-
-monthElement.value =
-String(
-Number(qrMonth)
-);
-
-}
-
-
-if(
-qrYear &&
-/^\d{4}$/.test(
-String(qrYear)
-)
-){
-
-const existingOption =
-Array.from(
-yearElement.options
-)
-.find(
-option =>
-option.value ===
-String(qrYear)
-);
-
-
-if(
-!existingOption
-){
-
-const option =
-document.createElement(
-"option"
-);
-
-
-option.value =
-String(qrYear);
-
-
-option.textContent =
-String(qrYear);
-
-
-yearElement.appendChild(
-option
-);
-
-}
-
-
-yearElement.value =
-String(qrYear);
-
-}
-
-}
-
-}
-
-
-
-/* =====================================================
-AUTHENTICATION
-===================================================== */
-
-requireAnyRole(
-
-[
-"SUPER ADMIN",
-"ADMIN",
-"NSA OFFICER"
-],
-
-
-function(session){
-
-console.log(
-"[HOME] AUTH PASSED",
-session
-);
-
-
-const page =
-document.getElementById(
-"officerHome"
-);
-
-
-if(!page){
-
-notify(
-"Officer portal could not initialize.",
-"error"
-);
-
-return;
-
-}
-
-
-page.style.display =
-"block";
-
-
-showOfficerRole();
+facingMode:
+"environment"
 
 },
 
 
-function(error){
-
-console.error(
-"[HOME] AUTH FAILED:",
-error
-);
-
-}
-
-);
-
-
-}
-
-
-catch(error){
-
-console.error(
-"[HOME] Initialization error:",
-error
-);
-
-
-notify(
-"Home page error: " +
-error.message,
-"error"
-);
-
-}
-
-}
-
-
-
-/* =====================================================
-SHOW OFFICER ROLE
-===================================================== */
-
-function showOfficerRole(){
-
-const element =
-document.getElementById(
-"loggedOfficer"
-);
-
-
-if(!element){
-
-return;
-
-}
-
-
-const role =
-getUserRole() ||
-"Officer";
-
-
-element.innerHTML =
-"Logged in as: " +
-role;
-
-}
-
-
-
-/* =====================================================
-CONTINUE PORTAL
-===================================================== */
-
-function continuePortal(){
-
-
-if(registrationBusy){
-
-console.log(
-"[PORTAL] Request already in progress."
-);
-
-return;
-
-}
-
-
-
-const nssElement =
-document.getElementById(
-"nss"
-);
-
-
-const serviceElement =
-document.getElementById(
-"service"
-);
-
-
-if(
-!nssElement ||
-!serviceElement
-){
-
-notify(
-"Portal form could not be loaded.",
-"error"
-);
-
-return;
-
-}
-
-
-
-const nss =
-nssElement
-.value
-.trim();
-
-
-const service =
-serviceElement
-.value;
-
-
-
-/* =====================================================
-VALIDATE NSS
-===================================================== */
-
-if(!nss){
-
-notify(
-"Enter NSS Number",
-"error"
-);
-
-return;
-
-}
-
-
-
-/* =====================================================
-MONTHLY
-DIRECT ROUTE
-
-NO OTP
-NO VERIFICATION PAGE
-===================================================== */
-
-if(
-service === "monthly"
-){
-
-const monthElement =
-document.getElementById(
-"evaluationMonth"
-);
-
-
-const yearElement =
-document.getElementById(
-"evaluationYear"
-);
-
-
-if(
-!monthElement ||
-!yearElement
-){
-
-notify(
-"Monthly evaluation period fields could not be loaded.",
-"error"
-);
-
-return;
-
-}
-
-
-const month =
-Number(
-monthElement.value
-);
-
-
-const year =
-Number(
-yearElement.value
-);
-
-
-if(
-!Number.isInteger(month) ||
-month < 1 ||
-month > 12
-){
-
-notify(
-"Please select a valid evaluation month.",
-"error"
-);
-
-return;
-
-}
-
-
-if(
-!Number.isInteger(year) ||
-year < 1
-){
-
-notify(
-"Please select a valid evaluation year.",
-"error"
-);
-
-return;
-
-}
-
-
-console.log(
-"[HOME] Opening monthly evaluation directly:",
-nss,
-month,
-year
-);
-
-
-openPage(
-"monthly-evaluation",
 {
 
-nssNumber:nss,
+fps:10,
 
-month:month,
+qrbox:{
+width:300,
+height:300
+},
 
-year:year,
+aspectRatio:1.0,
 
-type:"monthly"
+rememberLastUsedCamera:true
 
-}
-);
-
-
-return;
-
-}
+},
 
 
-
-/* =====================================================
-ANNUAL
-DIRECT ROUTE
-
-NO OTP
-NO VERIFICATION PAGE
-===================================================== */
-
-if(
-service === "annual"
-){
+function(decodedText,decodedResult){
 
 console.log(
-"[HOME] Opening annual evaluation directly:",
-nss
+"========== QR CALLBACK FIRED =========="
 );
-
-
-openPage(
-"annual-evaluation",
-{
-
-nssNumber:nss,
-
-type:"annual"
-
-}
-);
-
-
-return;
-
-}
-
-
-
-/* =====================================================
-REGISTRATION
-OTP ROUTE
-
-THIS IS THE ONLY ROUTE THAT USES OTP
-===================================================== */
-
-registrationBusy =
-true;
 
 
 console.log(
-"[REGISTRATION] Starting registration for:",
-nss
-);
-
-
-showLoader();
-
-
-
-google.script.run
-
-.withFailureHandler(
-function(error){
-
-hideLoader();
-
-registrationBusy =
-false;
-
-
-console.error(
-"[REGISTRATION] Server error:",
-error
-);
-
-
-notify(
-"Registration error: " +
-(
-error &&
-error.message
-?
-error.message
-:
-"Unknown error"
-),
-"error"
-);
-
-}
-)
-
-
-.withSuccessHandler(
-function(res){
-
-hideLoader();
-
-
-console.log(
-"[REGISTRATION] Portal response:",
-res
-);
-
-
-if(
-!res ||
-res.status !== "SUCCESS"
-){
-
-registrationBusy =
-false;
-
-
-notify(
-res &&
-res.message
-?
-res.message
-:
-"Unable to start registration.",
-"error"
-);
-
-return;
-
-}
-
-
-
-/* =====================================================
-SAVE REGISTRATION SESSION
-===================================================== */
-
-if(!res.token){
-
-registrationBusy =
-false;
-
-
-notify(
-"Registration session could not be created.",
-"error"
-);
-
-return;
-
-}
-
-
-saveRegistrationSession(
-res.token
-);
-
-
-
-/* =====================================================
-SEND OTP
-===================================================== */
-
-showLoader();
-
-
-google.script.run
-
-.withFailureHandler(
-function(error){
-
-hideLoader();
-
-registrationBusy =
-false;
-
-
-console.error(
-"[OTP] Send error:",
-error
-);
-
-
-notify(
-"Could not send OTP: " +
-(
-error &&
-error.message
-?
-error.message
-:
-"Unknown error"
-),
-"error"
-);
-
-}
-)
-
-
-.withSuccessHandler(
-function(otpRes){
-
-hideLoader();
-
-
-console.log(
-"[OTP] Response:",
-otpRes
-);
-
-
-if(
-!otpRes ||
-otpRes.status !== "SUCCESS"
-){
-
-registrationBusy =
-false;
-
-
-notify(
-otpRes &&
-otpRes.message
-?
-otpRes.message
-:
-"Unable to send verification code.",
-"error"
-);
-
-return;
-
-}
-
-
-notify(
-"Verification code sent successfully.",
-"success"
-);
-
-
-registrationBusy =
-false;
-
-
-google.script.run
-
-.withSuccessHandler(
-function(url){
-
-window.location.assign(
-url +
-"?page=otp&purpose=registration"
-);
-
-}
-)
-
-.getApplicationUrl();
-
-}
-)
-
-
-.sendRegistrationOTP(
-getRegistrationSession()
-);
-
-}
-)
-
-
-.openRegistrationPortal(
-nss
-);
-
-}
-
-
-
-/* =====================================================
-WINDOW LOAD
-===================================================== */
-
-window.onload =
-function(){
-
-console.log(
-"[HOME] Window loaded."
-);
-
-
-initializeMonthlyPeriodFields();
-
-initializeOfficerHome();
-
-};
-
-
-
-/* =====================================================
-QR CAMERA MESSAGE
-===================================================== */
-
-window.addEventListener(
-"message",
-function(event){
-
-
-if(
-event.origin !==
-"https://nsawawm.github.io"
-){
-
-return;
-
-}
-
-
-if(
-!event.data ||
-event.data.type !==
-"NSA_QR_SCAN"
-){
-
-return;
-
-}
-
-
-const decodedText =
-event.data.data;
-
-
-console.log(
-"[QR RECEIVED FROM CAMERA]",
+"TEXT:",
 decodedText
 );
 
 
-processQR(
-decodedText
+console.log(
+"RESULT:",
+decodedResult
 );
+
+
+
+/* =================================================
+PREVENT MULTIPLE SCANS
+================================================= */
+
+if(scanLocked){
+
+return;
 
 }
 
+
+scanLocked = true;
+
+
+
+setStatus(
+
+"QR FOUND:\n" +
+decodedText
+
 );
+
+
+
+sendQR(decodedText);
+
+},
+
+
+function(errorMessage){
+
+/*
+Normal scanning errors are ignored.
+*/
+
+}
+
+)
+
+
+.then(function(){
+
+setStatus(
+
+"Camera active. Point at QR code."
+
+);
+
+
+document
+.getElementById("start")
+.hidden = true;
+
+
+document
+.getElementById("stop")
+.hidden = false;
+
+})
+
+
+.catch(function(error){
+
+scanner = null;
+
+scanLocked = false;
+
+
+setStatus(
+
+"Camera error: " +
+error
+
+);
+
+});
+
+}
+
+
+
+/* =====================================================
+STOP SCANNER
+===================================================== */
+
+function stopScanner(){
+
+if(!scanner){
+
+return;
+
+}
+
+
+scanner.stop()
+
+.then(function(){
+
+return scanner.clear();
+
+})
+
+.then(function(){
+
+scanner = null;
+
+scanLocked = false;
+
+
+document
+.getElementById("start")
+.hidden = false;
+
+
+document
+.getElementById("stop")
+.hidden = true;
+
+
+setStatus(
+"Scanner stopped."
+);
+
+})
+
+.catch(function(error){
+
+console.error(
+"Scanner stop error:",
+error
+);
+
+scanner = null;
+
+scanLocked = false;
+
+
+document
+.getElementById("start")
+.hidden = false;
+
+
+document
+.getElementById("stop")
+.hidden = true;
+
+});
+
+}
+
+
+
+/* =====================================================
+SEND QR TO PARENT WINDOW
+===================================================== */
+
+function sendQR(decodedText){
+
+console.log(
+"[QR SCANNED]",
+decodedText
+);
+
+
+if(
+window.opener &&
+!window.opener.closed
+){
+
+window.opener.postMessage(
+
+{
+
+type:
+"NSA_QR_SCAN",
+
+data:
+String(decodedText || "").trim()
+
+},
+
+"*"
+
+);
+
+
+setStatus(
+
+"QR scanned successfully.\n" +
+"Returning to NSA application..."
+
+);
+
+
+/* =================================================
+CLOSE SCANNER WINDOW
+================================================= */
+
+setTimeout(function(){
+
+window.close();
+
+},1000);
+
+}
+
+else{
+
+setStatus(
+
+"QR scanned, but the NSA application window was not found."
+
+);
+
+scanLocked = false;
+
+}
+
+}
+
+
+
+/* =====================================================
+BUTTON EVENTS
+===================================================== */
+
+document
+.getElementById("start")
+.onclick =
+startScanner;
+
+
+
+document
+.getElementById("stop")
+.onclick =
+stopScanner;
 
 
 </script>
-
-
-
-<?!= include('footer'); ?>
 
 
 </body>
